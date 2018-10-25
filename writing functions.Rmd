@@ -1,0 +1,139 @@
+---
+
+title: "Writing functions"
+
+output: github_document
+
+---
+
+
+
+```{r, include = FALSE}
+
+knitr::opts_chunk$set(
+
+  collapse = TRUE,
+
+  fig.width = 6,
+
+  fig.asp = .6,
+
+  out.width = "90%"
+
+)
+
+
+
+library(tidyverse)
+
+library(rvest)
+
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
+
+```
+
+## First function
+
+```{r}
+x = rnorm(25, mean = 5, sd = 3)
+
+(x - mean(x)) / sd(x)
+
+#a function that takes the sample as an argument, computes the vector of Z scores in the body, and returns the result.
+
+z_scores = function(x) {
+  
+  z = (x - mean(x)) / sd(x)
+  z
+  
+}
+
+z_scores(x)
+```
+check other examples
+
+```{r}
+z_scores(3)
+## [1] NA
+z_scores("my name is jeff")
+## Warning in mean.default(x): argument is not numeric or logical: returning
+## NA
+## Error in x - mean(x): non-numeric argument to binary operator
+z_scores(iris)
+## Warning in mean.default(x): argument is not numeric or logical: returning
+## NA
+## Warning in Ops.factor(left, right): '-' not meaningful for factors
+## Error in is.data.frame(x): (list) object cannot be coerced to type 'double'
+z_scores(sample(c(TRUE, FALSE), 25, replace = TRUE))
+##  [1]  0.6721344 -1.4282857  0.6721344  0.6721344  0.6721344  0.6721344
+##  [7]  0.6721344 -1.4282857 -1.4282857  0.6721344 -1.4282857  0.6721344
+## [13]  0.6721344  0.6721344 -1.4282857  0.6721344  0.6721344 -1.4282857
+## [19]  0.6721344 -1.4282857  0.6721344 -1.4282857  0.6721344  0.6721344
+## [25]  0.6721344
+```
+These all did something I didn’t want, but only two returned errors. we’ll add some checks on the argument values using conditional statements.
+
+```{r}
+z_scores = function(x) {
+  
+  if (!is.numeric(x)) {
+    stop("Argument x should be numeric")
+  } else if (length(x) == 1) {
+    stop("Z scores cannot be computed for length 1 vectors")
+  }
+  
+  z = mean(x) / sd(x)
+  
+  z
+}
+```
+
+## Multiple outputs
+
+```{r}
+#creating a vector that contains both mean and sd
+
+mean_and_sd = function(x) {
+  
+  if (!is.numeric(x)) {
+    stop("Argument x should be numeric")
+  } else if (length(x) == 1) {
+    stop("Cannot be computed for length 1 vectors")
+  }
+  
+  mean_x = mean(x)
+  sd_x = sd(x)
+
+  list(mean = mean_x, 
+       sd = sd_x)
+}
+```
+
+```{r}
+#create a data frame that contains both mean and sd. this is preferred
+
+mean_and_sd = function(x) {
+  
+  if (!is.numeric(x)) {
+    stop("Argument x should be numeric")
+  } else if (length(x) == 1) {
+    stop("Cannot be computed for length 1 vectors")
+  }
+  
+  mean_x = mean(x)
+  sd_x = sd(x)
+
+  tibble(
+    mean = mean_x, 
+    sd = sd_x
+  )
+}
+```
+
+## Multiple inputs
+
+```{r}
+
+```
+
