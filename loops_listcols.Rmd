@@ -1,0 +1,248 @@
+---
+title: "iteration and listcols for loops"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(rvest)
+```
+
+## List Example
+
+```{r}
+set.seed(1)
+
+vec_numeric = 5:8
+vec_char = c("My", "name", "is", "Jeff")
+vec_logical = c(TRUE, TRUE, TRUE, FALSE)
+
+l = list(vec_numeric = 5:8,
+         mat         = matrix(1:8, 2, 4),
+         vec_logical = c(TRUE, FALSE),
+         summary     = summary(rnorm(1000)))
+l
+
+l$vec_numeric
+## [1] 5 6 7 8
+l[[1]]
+## [1] 5 6 7 8
+l[[1]][1:3]
+## [1] 5 6 7
+```
+
+## For loops
+
+```{r}
+df = data_frame(
+  a = rnorm(20, 3, 1),
+  b = rnorm(20, 0, 5),
+  c = rnorm(20, 10, .2),
+  d = rnorm(20, -3, 1)
+)
+
+is.list(df)
+```
+
+Using a function on 'df'
+
+```{r}
+mean_and_sd = function(x) {
+  
+  if (!is.numeric(x)) {
+    stop("Argument x should be numeric")
+  } else if (length(x) == 1) {
+    stop("Cannot be computed for length 1 vectors")
+  }
+  
+  mean_x = mean(x)
+  sd_x = sd(x)
+
+  tibble(
+    mean = mean_x, 
+    sd = sd_x
+  )
+}
+
+
+mean_and_sd(df[[1]])
+## # A tibble: 1 x 2
+##    mean    sd
+##   <dbl> <dbl>
+## 1  2.70  1.12
+mean_and_sd(df[[2]])
+## # A tibble: 1 x 2
+##    mean    sd
+##   <dbl> <dbl>
+## 1 0.416  4.08
+mean_and_sd(df[[3]])
+## # A tibble: 1 x 2
+##    mean    sd
+##   <dbl> <dbl>
+## 1  10.1 0.191
+mean_and_sd(df[[4]])
+## # A tibble: 1 x 2
+##    mean    sd
+##   <dbl> <dbl>
+## 1 -3.43  1.18
+```
+
+Create a for loop
+
+```{r}
+output = vector("list", length = 4)
+
+for (i in 1:4) {
+  output[[i]] = mean_and_sd(df[[i]])
+}
+
+#call the results
+output 
+```
+
+## Map
+
+use map instead of for loop
+
+```{r}
+#map(name of your df, the function)
+
+output = map(df, mean_and_sd)
+
+#It’s sometimes necessary to be more specific in giving arguments to map. In particular, using .x = df for the input list and ~ mean_and_sd(.x) to specify the function applied to the input list (using .x as a placeholder) will produce the same result.
+
+output = map(.x = df, ~ mean_and_sd(.x))
+```
+
+Use different function
+
+```{r}
+output = vector("list", length = 4)
+
+for (i in 1:4) {
+  output[[i]] = median(df[[i]])
+}
+
+output = map(df, median)
+```
+
+## Map variants
+
+This can produce more organized output
+
+```{r}
+
+output = map_dbl(df, median, .id = "input")
+#         a          b          c          d 
+# 2.6213757  0.7210996 10.0501641 -3.5216649 
+
+output = map_dfr(df, mean_and_sd, .id = "input")
+#   input    mean    sd
+#   <chr>   <dbl> <dbl>
+# 1 a       2.70  1.12 
+# 2 b       0.416 4.08 
+# 3 c      10.1   0.191
+# 4 d      -3.43  1.18 
+```
+
+## Map2 functions
+
+Helpful if there are multiple arguments. Want to be explicit about which ones go together
+
+```{r}
+# lotr_data = map2_df(
+#   .x = cell_ranges, .y = movie_names, 
+#   ~lotr_load_and_tidy(path = "./data/LotR_Words.xlsx", range = .x, movie_name = .y))
+# 
+# output = map2(.x = input_1, .y = input_2, ~func(arg_1 = .x, arg_2 = .y))
+```
+
+## Napoleon
+
+```{r}
+url_base = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber="
+vec_urls = str_c(url_base, 1:5)
+
+read_page_reviews <- function(url) {
+  
+  h = read_html(url)
+  
+  title = h %>%
+    html_nodes("#cm_cr-review_list .review-title") %>%
+    html_text()
+  
+  stars = h %>%
+    html_nodes("#cm_cr-review_list .review-rating") %>%
+    html_text() %>%
+    str_extract("\\d") %>%
+    as.numeric()
+  
+  text = h %>%
+    html_nodes(".review-data:nth-child(4)") %>%
+    html_text()
+  
+  data_frame(title, stars, text)
+}
+
+output = map_df(vec_urls, read_page_reviews)
+```
+
+
+## List cols
+
+```{r}
+library(rnoaa)
+
+weather = 
+  meteo_pull_monitors(c("USW00094728", "USC00519397", "USS0023B17S"),
+                      var = c("PRCP", "TMIN", "TMAX"), 
+                      date_min = "2016-01-01",
+                      date_max = "2016-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY", 
+                      USC00519397 = "Waikiki_HA",
+                      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+
+weather_nest = 
+  nest(weather, date:tmin)
+
+weather_nest
+
+weather_nest %>% pull(name)
+## [1] "CentralPark_NY" "Waikiki_HA"     "Waterhole_WA"
+weather_nest %>% pull(data)
+
+weather_nest$data[[1]]
+
+unnest(weather_nest)
+```
+
+
+## Operations on list cols
+
+```{r}
+#write a function
+weather_lm = function(df) {
+  lm(tmax ~ tmin, data = df)
+}
+
+#apply function to one data frame
+weather_lm(weather_nest$data[[1]])
+
+#apply function to all data frames
+map(weather_nest$data, weather_lm)
+
+#being specific
+map(weather_nest$data, ~lm(tmax ~ tmin, data = .x))
+
+#making it a data frame, using mutate and piping to define new variable
+weather_nest = 
+  weather_nest %>% 
+  mutate(models = map(data, weather_lm))
+
+weather_nest
+```
+
